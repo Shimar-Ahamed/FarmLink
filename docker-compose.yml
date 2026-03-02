@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: farmlink_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: farmlink_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - farmlink_pgdata:/var/lib/postgresql/data
+
+volumes:
+  farmlink_pgdata:

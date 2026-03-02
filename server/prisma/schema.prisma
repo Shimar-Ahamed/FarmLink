@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  FARMER
+  BUYER
+  ADMIN
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  EXPIRED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  role         UserRole
+  mobile       String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  farmerProfile FarmerProfile?
+  buyerProfile  BuyerProfile?
+}
+
+model FarmerProfile {
+  id       String   @id @default(cuid())
+  userId   String   @unique
+  fullName String
+  whatsapp String?
+  bio      String?
+
+  // Micro location (optional, shown after contact)
+  address  String?
+
+  // Macro location (required, for filtering)
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+
+  listings Listing[]
+
+  user     User @relation(fields: [userId], references: [id])
+}
+
+model BuyerProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  businessName String
+  buyerType    String?
+  ownerName    String?
+  whatsapp     String?
+
+  // Micro location (optional)
+  address      String?
+
+  // Macro location (optional, helps UX and delivery, but not required)
+  locationId   String?
+  location     Location? @relation(fields: [locationId], references: [id])
+
+  user         User @relation(fields: [userId], references: [id])
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  province  String
+  district  String
+  city      String?
+  createdAt DateTime @default(now())
+
+  farmerProfiles FarmerProfile[]
+  buyerProfiles  BuyerProfile[]
+  listings       Listing[]
+
+  @@unique([province, district, city])
+  @@index([province, district])
+  @@index([district, city])
+}
+
+model Vegetable {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  slug     String  @unique
+  isActive Boolean @default(true)
+
+  listings Listing[]
+}
+
+model Listing {
+  id          String        @id @default(cuid())
+  farmerId    String
+  vegetableId String
+  status      ListingStatus @default(ACTIVE)
+
+  quantityKg  Float
+  pricePerKg  Float
+  notes       String?
+
+  // Macro location is required so every listing can be filtered by region
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id])
+
+  availableUntil DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  farmer      FarmerProfile @relation(fields: [farmerId], references: [id])
+  vegetable   Vegetable     @relation(fields: [vegetableId], references: [id])
+
+  @@index([vegetableId, status])
+  @@index([locationId, status])
+  @@index([farmerId, status])
+}

@@ -1,57 +1,85 @@
-# Node modules
+# ===============================
+# Node / Nest / Next
+# ===============================
 node_modules/
+dist/
+*.tsbuildinfo
 
-# --- NEXT.JS (Client) ---
+# Next.js
 .next/
 out/
 build/
 .vercel/
 
-# --- NESTJS (Server) ---
-dist/
-*.tsbuildinfo
-
-# Environment variables
+# ===============================
+# Environment Variables (NEVER COMMIT)
+# ===============================
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
+# ===============================
 # Logs
+# ===============================
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# OS files
+# ===============================
+# IDE
+# ===============================
+.vscode/
+.idea/
+
+# ===============================
+# OS Files
+# ===============================
 .DS_Store
 Thumbs.db
 
-# --- PYTHON / MACHINE LEARNING (The Missing Part) ---
-# 1. Virtual Environments (NEVER commit these!)
+# ===============================
+# Docker
+# ===============================
+docker-compose.override.yml
+
+# ===============================
+# Prisma
+# ===============================
+# Keep migrations committed for FYP
+# DO NOT ignore prisma/migrations/
+
+*.db
+
+# ===============================
+# Coverage
+# ===============================
+coverage/
+
+# ===============================
+# Python / ML
+# ===============================
+
+# Virtual environments
 venv/
 .venv/
 env/
 ml/venv/
 
-# 2. Python Cache (Generated automatically, do not commit)
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
 
-# 3. Data (Keep your repo light)
-# We usually ignore the whole data folder because CSVs can be large.
-# You can comment these out if your data is very small (<50MB).
+# Large data files
 ml/data/
 ml/data/raw/
 ml/data/processed/
 
-# 4. Trained Models (Binary files)
-# These are often too large for GitHub.
+# Model binaries
 *.pkl
 *.h5
 *.pt
 ml/models/
 
-# 5. Jupyter Notebook Checkpoints
+# Jupyter
 .ipynb_checkpoints/
