@@ -71,9 +71,13 @@ __pycache__/
 *$py.class
 
 # Large data files
-ml/data/
 ml/data/raw/
-ml/data/processed/
+
+# IMPORTANT: Keep the final forecast JSON and plots for the NestJS backend and thesis!
+!ml/data/outputs/
+!ml/data/outputs/*.json
+!ml/data/plots/
+!ml/data/plots/*.png
 
 # Model binaries
 *.pkl
