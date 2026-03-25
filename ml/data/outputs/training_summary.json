@@ -1,0 +1,15 @@
+{
+  "rows_total_weekly": 129999,
+  "rows_train": 103601,
+  "rows_test": 26042,
+  "regions": 25,
+  "commodities": 20,
+  "forecast_pairs": 500,
+  "forecast_rows_2026": 26000,
+  "metrics": {
+    "MAE_LKR": 22.32,
+    "RMSE_LKR": 32.87,
+    "MAPE_Percent": 12.73,
+    "R_Squared": 0.936
+  }
+}

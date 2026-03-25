@@ -102,8 +102,18 @@
     "Winged Bean"
   ],
   "test_metrics": {
-    "R2": 0.9203182562254333,
-    "MAE": 26.0806518841383,
-    "RMSE": 36.58910359880686
-  }
+    "MAE_LKR": 22.32,
+    "RMSE_LKR": 32.87,
+    "MAPE_Percent": 12.73,
+    "R_Squared": 0.936
+  },
+  "train_period": "2020-2023",
+  "test_period": "2024",
+  "final_training_period": "2020-2024",
+  "forecast_method": "Direct weekly forecast using calendar, climate, region, and commodity features",
+  "future_climate_method": "Historical weekly region-wise averages",
+  "xai_methods": [
+    "XGBoost pred_contribs for farmer-friendly explanations",
+    "SHAP for thesis-level global explainability plots"
+  ]
 }

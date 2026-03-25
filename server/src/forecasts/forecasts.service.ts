@@ -16,7 +16,7 @@ export class ForecastsService implements OnModuleInit {
         process.cwd(),
         'src',
         'data',
-        'forecasts_2026_weekly_xgb_fastxai.json',
+        'final_forecasts_2026_weekly_xgb_final.json',
       );
 
       const fileContent = fs.readFileSync(filePath, 'utf-8');

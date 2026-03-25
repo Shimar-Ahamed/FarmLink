@@ -1,0 +1,11 @@
+{
+  "model": "Random Forest Baseline",
+  "train_period": "2020-2023",
+  "test_period": "2024",
+  "metrics": {
+    "MAE_LKR": 71.6,
+    "RMSE_LKR": 85.43,
+    "MAPE_Percent": 42.59,
+    "R_Squared": 0.566
+  }
+}

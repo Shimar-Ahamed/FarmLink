@@ -9,12 +9,87 @@ async function main() {
   // Vegetables
   // -------------------------
   const vegetables = [
-    { name: "Tomato", slug: "tomato" },
-    { name: "Onion", slug: "onion" },
-    { name: "Carrot", slug: "carrot" },
-    { name: "Potato", slug: "potato" },
-    { name: "Cabbage", slug: "cabbage" },
-  ];
+  {
+    "name": "Asiatic Pennywort",
+    "slug": "asiatic-pennywort" 
+  },
+  {
+    "name": "Beetroot",
+    "slug": "beetroot"
+  },
+  {
+    "name": "Bitter Melon",     
+    "slug": "bitter-melon"      
+  },
+  {
+    "name": "Breadfruit",       
+    "slug": "breadfruit"        
+  },
+  {
+    "name": "Brinjal",
+    "slug": "brinjal"
+  },
+  {
+    "name": "Cabbage",
+    "slug": "cabbage"
+  },
+  {
+    "name": "Carrot",
+    "slug": "carrot"
+  },
+  {
+    "name": "Drumsticks",
+    "slug": "drumsticks"
+  },
+  {
+    "name": "Jackfruit",
+    "slug": "jackfruit"
+  },
+  {
+    "name": "Knol-Khol",
+    "slug": "knol-khol"
+  },
+  {
+    "name": "Leeks",
+    "slug": "leeks"
+  },
+  {
+    "name": "Long Purple Eggplant",
+    "slug": "long-purple-eggplant"
+  },
+  {
+    "name": "Manioc",
+    "slug": "manioc"
+  },
+  {
+    "name": "Onion",
+    "slug": "onion"
+  },
+  {
+    "name": "Pennywort",
+    "slug": "pennywort"
+  },
+  {
+    "name": "Potato",
+    "slug": "potato"
+  },
+  {
+    "name": "Pumpkin",
+    "slug": "pumpkin"
+  },
+  {
+    "name": "Red Spinach",
+    "slug": "red-spinach"
+  },
+  {
+    "name": "Taro",
+    "slug": "taro"
+  },
+  {
+    "name": "Winged Bean",
+    "slug": "winged-bean"
+  }
+];
 
   for (const veg of vegetables) {
     await prisma.vegetable.upsert({
