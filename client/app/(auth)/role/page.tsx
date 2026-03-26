@@ -33,7 +33,7 @@ export default function RoleSelectionPage() {
             onClick={() => handleRoleSelect("farmer")}
           >
             <Image
-              src="/auth/Farmer.png"
+              src="/auth/farmer.png"
               width={100}
               height={100}
               alt="Farmer"
@@ -49,7 +49,7 @@ export default function RoleSelectionPage() {
             onClick={() => handleRoleSelect("buyer")}
           >
             <Image
-              src="/auth/Buyer.png"
+              src="/auth/buyer.png"
               width={100}
               height={100}
               alt="Buyer"
