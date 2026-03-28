@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 import warnings
 
 import joblib
@@ -15,13 +15,13 @@ import xgboost as xgb
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-# --- Safe plotting backend for terminals / servers ---
+# Safe plotting backend for terminals/servers
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# --- SHAP for thesis explainability ---
+# Explainability
 import shap
 
 warnings.filterwarnings("ignore")
@@ -42,7 +42,6 @@ def regression_metrics(y_true, y_pred) -> dict:
     rmse = float(np.sqrt(mean_squared_error(y_true, y_pred)))
     mape_val = float(mape(y_true, y_pred))
     r2 = float(r2_score(y_true, y_pred))
-
     return {
         "MAE_LKR": round(mae, 2),
         "RMSE_LKR": round(rmse, 2),
@@ -103,10 +102,7 @@ def plot_actual_vs_predicted(y_true, y_pred, plots_dir: Path) -> None:
 
 def plot_feature_importance(model: XGBRegressor, feature_names: list[str], plots_dir: Path) -> None:
     imp_df = pd.DataFrame(
-        {
-            "feature": feature_names,
-            "importance": model.feature_importances_,
-        }
+        {"feature": feature_names, "importance": model.feature_importances_}
     ).sort_values("importance", ascending=False).head(20)
 
     plt.figure(figsize=(12, 8))
@@ -157,18 +153,31 @@ def safe_float(x, default=np.nan):
         return default
 
 
+def find_column_by_keyword(columns: list[str], keyword: str) -> str:
+    for c in columns:
+        if keyword.lower() in c.lower():
+            return c
+    raise ValueError(f"Could not find column containing keyword: {keyword}")
+
+
 # =========================================================
 # DATA PREPARATION
 # =========================================================
-def clean_and_prepare(raw_csv: Path) -> pd.DataFrame:
-    df_raw = pd.read_csv(raw_csv, encoding="latin1", low_memory=False)
+def load_raw_data(raw_csv: Path) -> pd.DataFrame:
+    return pd.read_csv(raw_csv, encoding="latin1", low_memory=False)
+
+
+def clean_and_standardize(df_raw: pd.DataFrame) -> pd.DataFrame:
+    temp_raw_col = find_column_by_keyword(df_raw.columns.tolist(), "temperature")
+    rain_raw_col = find_column_by_keyword(df_raw.columns.tolist(), "rainfall")
+    humidity_raw_col = find_column_by_keyword(df_raw.columns.tolist(), "humidity")
 
     keep_cols = [
         "Date",
         "Region",
-        "Temperature (°C)",
-        "Rainfall (mm)",
-        "Humidity (%)",
+        temp_raw_col,
+        rain_raw_col,
+        humidity_raw_col,
         "vegitable_Commodity",
         "vegitable_Price per Unit (LKR/kg)",
     ]
@@ -181,9 +190,9 @@ def clean_and_prepare(raw_csv: Path) -> pd.DataFrame:
     df.columns = [
         "Date",
         "Region",
-        "Temperature (°C)",
-        "Rainfall (mm)",
-        "Humidity (%)",
+        "Temperature_C",
+        "Rainfall_mm",
+        "Humidity_pct",
         "Commodity",
         "Price",
     ]
@@ -192,16 +201,20 @@ def clean_and_prepare(raw_csv: Path) -> pd.DataFrame:
     df["Commodity"] = df["Commodity"].astype(str).str.strip()
 
     df["Price"] = pd.to_numeric(df["Price"], errors="coerce")
-    df["Temperature (°C)"] = pd.to_numeric(df["Temperature (°C)"], errors="coerce")
-    df["Rainfall (mm)"] = pd.to_numeric(df["Rainfall (mm)"], errors="coerce")
-    df["Humidity (%)"] = pd.to_numeric(df["Humidity (%)"], errors="coerce")
+    df["Temperature_C"] = pd.to_numeric(df["Temperature_C"], errors="coerce")
+    df["Rainfall_mm"] = pd.to_numeric(df["Rainfall_mm"], errors="coerce")
+    df["Humidity_pct"] = pd.to_numeric(df["Humidity_pct"], errors="coerce")
 
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce", dayfirst=False)
 
     df = df.dropna(subset=["Date", "Region", "Commodity", "Price"]).copy()
     df = df[(df["Date"].dt.year.between(2020, 2024)) & (df["Price"] > 0)].copy()
 
-    # True weekly aggregation using Monday as week start
+    return df
+
+
+def aggregate_weekly_and_engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+    # Weekly aggregation using Monday as week start
     df["WeekStart"] = df["Date"] - pd.to_timedelta(df["Date"].dt.weekday, unit="D")
     df["WeekStart"] = pd.to_datetime(df["WeekStart"]).dt.normalize()
 
@@ -210,9 +223,9 @@ def clean_and_prepare(raw_csv: Path) -> pd.DataFrame:
         .agg(
             {
                 "Price": "mean",
-                "Temperature (°C)": "mean",
-                "Rainfall (mm)": "mean",
-                "Humidity (%)": "mean",
+                "Temperature_C": "mean",
+                "Rainfall_mm": "mean",
+                "Humidity_pct": "mean",
             }
         )
         .sort_values(["Region", "Commodity", "WeekStart"])
@@ -225,7 +238,7 @@ def clean_and_prepare(raw_csv: Path) -> pd.DataFrame:
     weekly["DayOfWeek"] = weekly["WeekStart"].dt.dayofweek
     weekly["DayOfYear"] = weekly["WeekStart"].dt.dayofyear
 
-    for col in ["Temperature (°C)", "Rainfall (mm)", "Humidity (%)"]:
+    for col in ["Temperature_C", "Rainfall_mm", "Humidity_pct"]:
         weekly[col] = weekly.groupby(["Region", "WeekOfYear"])[col].transform(
             lambda s: s.fillna(s.median())
         )
@@ -250,9 +263,9 @@ def one_hot_encode(train_df: pd.DataFrame, test_df: pd.DataFrame):
         "WeekOfYear",
         "DayOfWeek",
         "DayOfYear",
-        "Temperature (°C)",
-        "Rainfall (mm)",
-        "Humidity (%)",
+        "Temperature_C",
+        "Rainfall_mm",
+        "Humidity_pct",
         "Region",
         "Commodity",
     ]
@@ -262,7 +275,6 @@ def one_hot_encode(train_df: pd.DataFrame, test_df: pd.DataFrame):
 
     X_train = pd.get_dummies(X_train, columns=["Region", "Commodity"], drop_first=True)
     X_test = pd.get_dummies(X_test, columns=["Region", "Commodity"], drop_first=True)
-
     X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
 
     y_train = train_df["Price"].astype(float).copy()
@@ -272,11 +284,15 @@ def one_hot_encode(train_df: pd.DataFrame, test_df: pd.DataFrame):
 
 
 def compute_weekly_climate(df: pd.DataFrame) -> pd.DataFrame:
-    climate_cols = ["Temperature (°C)", "Rainfall (mm)", "Humidity (%)"]
+    climate_cols = ["Temperature_C", "Rainfall_mm", "Humidity_pct"]
     return df.groupby(["Region", "WeekOfYear"], as_index=False)[climate_cols].mean()
 
 
-def build_forecast_frame_2026(regions, commodities, weekly_climate: pd.DataFrame) -> pd.DataFrame:
+def build_forecast_frame_2026(
+    regions: list[str],
+    commodities: list[str],
+    weekly_climate: pd.DataFrame,
+) -> pd.DataFrame:
     forecast_dates = pd.date_range("2026-01-05", "2026-12-28", freq="W-MON")
 
     rows = []
@@ -297,18 +313,17 @@ def build_forecast_frame_2026(regions, commodities, weekly_climate: pd.DataFrame
                 )
 
     fdf = pd.DataFrame(rows)
-
     fdf = fdf.merge(weekly_climate, on=["Region", "WeekOfYear"], how="left")
 
-    if fdf[["Temperature (°C)", "Rainfall (mm)", "Humidity (%)"]].isna().any().any():
+    if fdf[["Temperature_C", "Rainfall_mm", "Humidity_pct"]].isna().any().any():
         overall_weekly = (
             weekly_climate.groupby("WeekOfYear", as_index=False)[
-                ["Temperature (°C)", "Rainfall (mm)", "Humidity (%)"]
+                ["Temperature_C", "Rainfall_mm", "Humidity_pct"]
             ].mean()
         )
         fdf = fdf.merge(overall_weekly, on="WeekOfYear", how="left", suffixes=("", "_global"))
 
-        for col in ["Temperature (°C)", "Rainfall (mm)", "Humidity (%)"]:
+        for col in ["Temperature_C", "Rainfall_mm", "Humidity_pct"]:
             fdf[col] = fdf[col].fillna(fdf[f"{col}_global"])
             fdf.drop(columns=[f"{col}_global"], inplace=True)
 
@@ -323,9 +338,9 @@ def encode_forecast_frame(fdf: pd.DataFrame, feature_columns: list[str]) -> pd.D
             "WeekOfYear",
             "DayOfWeek",
             "DayOfYear",
-            "Temperature (°C)",
-            "Rainfall (mm)",
-            "Humidity (%)",
+            "Temperature_C",
+            "Rainfall_mm",
+            "Humidity_pct",
             "Region",
             "Commodity",
         ]
@@ -344,12 +359,9 @@ def top_contrib_features(feature_columns: list[str], contrib_row: np.ndarray, to
     return [(feature_columns[i], float(vals[i])) for i in idx], float(contrib_row[-1])
 
 
-def farmer_explanation_from_contribs(
-    top_feats: list[tuple[str, float]],
-    region: str | None = None
-) -> str:
+def farmer_explanation_from_contribs(top_feats: list[tuple[str, float]], region: str | None = None) -> str:
     time_keys = {"Year", "Month", "WeekOfYear", "DayOfWeek", "DayOfYear"}
-    climate_keys = {"Temperature (°C)", "Rainfall (mm)", "Humidity (%)"}
+    climate_keys = {"Temperature_C", "Rainfall_mm", "Humidity_pct"}
 
     time_effect = 0.0
     climate_effect = 0.0
@@ -414,62 +426,76 @@ def main():
     raw_csv = base_dir / "data" / "raw" / "Kaggle_Vegetables_fruit_prices_with_climate_130000_2020_to_2025.csv"
 
     processed_dir, outputs_dir, models_dir, plots_dir = [
-        base_dir / "data" / folder
-        for folder in ["processed", "outputs", "models", "plots"]
+        base_dir / "data" / folder for folder in ["processed", "outputs", "models", "plots"]
     ]
-
     for d in [processed_dir, outputs_dir, models_dir, plots_dir]:
         d.mkdir(parents=True, exist_ok=True)
 
-    print("1) Loading data, preparing true weekly dataset, and generating plots...")
-    df = clean_and_prepare(raw_csv)
-    df.to_csv(processed_dir / "final_vegetables_clean_weekly_2020_2024.csv", index=False)
-    generate_eda_plots(df, plots_dir)
+    print("Step 1: Load raw dataset...")
+    df_raw = load_raw_data(raw_csv)
+    print(f"Raw shape: {df_raw.shape}")
 
-    print("2) Time split (Train=2020-2023, Test=2024) and encoding...")
-    train_df, test_df = time_split(df)
+    print("Step 2: Clean data and standardize columns...")
+    df_clean = clean_and_standardize(df_raw)
+    print(f"Cleaned daily shape: {df_clean.shape}")
 
+    print("Step 3: Weekly aggregation and feature engineering...")
+    weekly = aggregate_weekly_and_engineer_features(df_clean)
+    print(f"Weekly dataset shape: {weekly.shape}")
+    print(f"Unique regions: {weekly['Region'].nunique()}")
+    print(f"Unique commodities: {weekly['Commodity'].nunique()}")
+
+    print("Step 4: Save processed dataset...")
+    weekly.to_csv(processed_dir / "final_vegetables_clean_weekly_2020_2024.csv", index=False)
+
+    print("Step 5: Generate EDA plots...")
+    generate_eda_plots(weekly, plots_dir)
+
+    print("Step 6: Time-based split (Train=2020-2023, Test=2024)...")
+    train_df, test_df = time_split(weekly)
     if train_df.empty or test_df.empty:
         raise ValueError("Train or test split is empty. Check dataset year coverage.")
 
+    print("Step 7: Feature matrix + one-hot encoding...")
     X_train, X_test, y_train, y_test, feature_columns = one_hot_encode(train_df, test_df)
+    print(f"X_train shape: {X_train.shape}")
+    print(f"X_test shape: {X_test.shape}")
+    print(f"Number of model features: {len(feature_columns)}")
 
-    print("3) Training XGBoost Calendar-Climate model...")
+    print("Step 8: Train XGBoost evaluation model...")
     model = build_model()
     model.fit(X_train, y_train)
 
-    print("4) Evaluating on 2024 holdout...")
+    print("Step 9: Evaluate model on 2024 holdout...")
     pred_test = model.predict(X_test)
     metrics = regression_metrics(y_test, pred_test)
-
     print(json.dumps(metrics, indent=2))
 
+    print("Step 10: Evaluation visualizations + SHAP...")
     plot_actual_vs_predicted(y_test, pred_test, plots_dir)
     plot_feature_importance(model, feature_columns, plots_dir)
     generate_shap_plots(model, X_test, plots_dir)
 
+    print("Step 11: Save evaluation artifacts...")
     eval_df = test_df[["WeekStart", "Region", "Commodity", "Price"]].copy()
     eval_df["PredictedPrice"] = pred_test
     eval_df.to_csv(outputs_dir / "final_test_predictions_2024.csv", index=False)
-
     joblib.dump(model, models_dir / "final_xgb_vegetable_model_eval_2020_2023.pkl")
 
-    print("5) Retraining final model on full data up to 2024...")
-    full_df = df[df["Year"].between(2020, 2024)].copy()
-
+    print("Step 12: Retrain final model on full history (2020-2024)...")
+    full_df = weekly[weekly["Year"].between(2020, 2024)].copy()
     full_feature_cols = [
         "Year",
         "Month",
         "WeekOfYear",
         "DayOfWeek",
         "DayOfYear",
-        "Temperature (°C)",
-        "Rainfall (mm)",
-        "Humidity (%)",
+        "Temperature_C",
+        "Rainfall_mm",
+        "Humidity_pct",
         "Region",
         "Commodity",
     ]
-
     X_full = full_df[full_feature_cols].copy()
     X_full = pd.get_dummies(X_full, columns=["Region", "Commodity"], drop_first=True)
     X_full = X_full.reindex(columns=feature_columns, fill_value=0)
@@ -477,11 +503,11 @@ def main():
 
     final_model = build_model()
     final_model.fit(X_full, y_full)
-
     joblib.dump(final_model, models_dir / "final_xgb_vegetable_model_final.pkl")
 
     weekly_climate = compute_weekly_climate(full_df)
 
+    print("Step 13: Save metadata...")
     meta = {
         "feature_columns": feature_columns,
         "regions": sorted(full_df["Region"].unique().tolist()),
@@ -494,32 +520,33 @@ def main():
         "future_climate_method": "Historical weekly region-wise averages",
         "xai_methods": [
             "XGBoost pred_contribs for farmer-friendly explanations",
-            "SHAP for thesis-level global explainability plots"
+            "SHAP for thesis-level global explainability plots",
         ],
     }
-
     (models_dir / "xgb_model_meta.json").write_text(
         json.dumps(meta, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
 
-    print("6) Building 2026 weekly forecasts and farmer-friendly XAI...")
+    print("Step 14: Build 2026 forecast frame...")
     fdf = build_forecast_frame_2026(meta["regions"], meta["commodities"], weekly_climate)
+
+    print("Step 15: Encode forecast frame and predict...")
     forecast_enc = encode_forecast_frame(fdf, feature_columns)
     preds = final_model.predict(forecast_enc)
 
+    print("Step 16: Compute XGBoost contribution scores...")
     contribs = final_model.get_booster().predict(
         xgb.DMatrix(forecast_enc, feature_names=feature_columns),
         pred_contribs=True,
         approx_contribs=True,
     )
 
-    print("7) Assembling forecast JSON...")
+    print("Step 17: Assemble forecast payload...")
     ci = 1.5 * metrics["MAE_LKR"]
     fdf["yhat_lkr"] = preds
 
     pairs_out = []
-
     for (region, commodity), group in fdf.groupby(["Region", "Commodity"], sort=True):
         forecasts = []
         group = group.sort_values("WeekStart")
@@ -527,7 +554,6 @@ def main():
         for i in group.index:
             pred = float(group.loc[i, "yhat_lkr"])
             top_feats, _ = top_contrib_features(feature_columns, contribs[i], top_k=6)
-
             forecasts.append(
                 {
                     "ds": group.loc[i, "WeekStart"].strftime("%Y-%m-%d"),
@@ -535,9 +561,9 @@ def main():
                     "yhat_lower_lkr": round(max(0.0, pred - ci), 2),
                     "yhat_upper_lkr": round(pred + ci, 2),
                     "climate_assumed": {
-                        "temperature": round(safe_float(group.loc[i, "Temperature (°C)"]), 2),
-                        "rainfall": round(safe_float(group.loc[i, "Rainfall (mm)"]), 2),
-                        "humidity": round(safe_float(group.loc[i, "Humidity (%)"]), 2),
+                        "temperature": round(safe_float(group.loc[i, "Temperature_C"]), 2),
+                        "rainfall": round(safe_float(group.loc[i, "Rainfall_mm"]), 2),
+                        "humidity": round(safe_float(group.loc[i, "Humidity_pct"]), 2),
                     },
                     "xai_farmer": {
                         "explanation": farmer_explanation_from_contribs(top_feats, region=region)
@@ -568,6 +594,7 @@ def main():
         "pairs": pairs_out,
     }
 
+    print("Step 18: Save final artifacts...")
     forecast_json = outputs_dir / "final_forecasts_2026_weekly_xgb_final.json"
     forecast_json.write_text(
         json.dumps(output, indent=2, ensure_ascii=False),
@@ -579,7 +606,7 @@ def main():
     forecast_csv.to_csv(outputs_dir / "final_forecasts_2026_weekly_xgb_final.csv", index=False)
 
     summary = {
-        "rows_total_weekly": int(len(df)),
+        "rows_total_weekly": int(len(weekly)),
         "rows_train": int(len(train_df)),
         "rows_test": int(len(test_df)),
         "regions": int(full_df["Region"].nunique()),
@@ -588,14 +615,15 @@ def main():
         "forecast_rows_2026": int(len(fdf)),
         "metrics": metrics,
     }
-
     (outputs_dir / "training_summary.json").write_text(
         json.dumps(summary, indent=2),
         encoding="utf-8",
     )
 
-    print(f"✅ Success! Generated 2026 forecasts for {len(pairs_out)} region-commodity pairs.")
-    print(f"✅ Forecast JSON saved to: {forecast_json}")
+    print("Step 19: Final output check...")
+    print(f"Success: Generated 2026 forecasts for {len(pairs_out)} region-commodity pairs.")
+    print(f"Forecast JSON saved to: {forecast_json}")
+    print(f"Training summary saved to: {outputs_dir / 'training_summary.json'}")
 
 
 if __name__ == "__main__":

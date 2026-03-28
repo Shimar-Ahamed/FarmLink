@@ -7,6 +7,7 @@
 :root {
   --background: 255 255 255;
   --foreground: 23 23 23;
+  color-scheme: light;
 
   --primary: 34 197 94;
 
@@ -42,27 +43,6 @@
 }
 
 /* -----------------------
-   Dark Mode (optional)
------------------------ */
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: 10 10 10;
-    --foreground: 237 237 237;
-
-    --muted: 30 30 30;
-    --muted-foreground: 180 180 180;
-
-    --popover: 20 20 20;
-    --popover-foreground: 237 237 237;
-
-    --border: 55 55 55;
-    --input: 30 30 30;
-    --ring: 34 197 94;
-  }
-}
-
-/* -----------------------
    Base Styles
 ----------------------- */
 
@@ -71,4 +51,3 @@ body {
   color: rgb(var(--foreground));
   font-family: var(--font-poppins), Arial, Helvetica, sans-serif;
 }
-

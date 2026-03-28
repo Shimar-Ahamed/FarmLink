@@ -1,4 +1,4 @@
-Date,Region,Commodity,Year,Month,WeekOfYear,DayOfWeek,DayOfYear,Temperature (°C),Rainfall (mm),Humidity (%),yhat_lkr
+Date,Region,Commodity,Year,Month,WeekOfYear,DayOfWeek,DayOfYear,Temperature_C,Rainfall_mm,Humidity_pct,yhat_lkr
 2026-01-05,Ampara,Asiatic Pennywort,2026,1,2,0,5,27.037,185.993,64.065,269.52902
 2026-01-12,Ampara,Asiatic Pennywort,2026,1,3,0,12,31.693,133.589,65.282,281.55768
 2026-01-19,Ampara,Asiatic Pennywort,2026,1,4,0,19,26.83020833333333,227.828125,72.75416666666666,288.156
